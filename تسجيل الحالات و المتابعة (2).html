@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>برنامج AFCM البحثي المتكامل (Desktop Edition)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Segoe+UI&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #1a252f;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #c0392b;
+            --bg-color: #f0f2f5;
+            --sidebar-width: 250px;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+
+        body {
+            font-family: 'Segoe UI', 'Cairo', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Sidebar Navigation --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+
+        .sidebar-header {
+            text-align: center;
+            padding: 0 15px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+        }
+        .sidebar-header h2 { margin: 0; font-size: 1.2rem; color: var(--accent-color); }
+        .sidebar-header p { margin: 5px 0 0; font-size: 0.8rem; color: #bdc3c7; }
+
+        .nav-link {
+            padding: 15px 25px;
+            color: #ecf0f1;
+            text-decoration: none;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1rem;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255,255,255,0.1);
+            border-right: 4px solid var(--accent-color);
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 20px;
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            text-align: center;
+        }
+
+        /* --- Main Content Area --- */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+            position: relative;
+        }
+
+        .view-section { display: none; animation: fadeIn 0.3s; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- Forms & Cards --- */
+        .panel-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        .panel-header {
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-title { font-size: 1.1rem; color: var(--primary-color); font-weight: bold; margin: 0; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; font-size: 0.9rem; }
+        input, select, textarea {
+            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;
+            font-size: 14px; font-family: inherit; transition: 0.3s;
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
+
+        /* --- Dashboard Stats --- */
+        .stat-card {
+            background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            text-align: center; border-bottom: 4px solid var(--accent-color);
+        }
+        .stat-icon { font-size: 2rem; margin-bottom: 10px; display: block; }
+        .stat-number { font-size: 2rem; font-weight: bold; color: var(--primary-color); display: block; }
+        .stat-label { font-size: 0.9rem; color: #7f8c8d; }
+        
+        /* Progress Bars for Stats */
+        .progress-container { margin-bottom: 15px; }
+        .progress-header { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9rem; font-weight: 600; }
+        .progress-bar { background: #eee; height: 10px; border-radius: 5px; overflow: hidden; }
+        .progress-fill { height: 100%; transition: width 0.5s ease-in-out; }
+        .fill-a { background: #3498db; }
+        .fill-b { background: #9b59b6; }
+        .fill-c { background: #e67e22; }
+
+        /* --- Image Upload & Gallery --- */
+        .upload-area {
+            border: 2px dashed #bdc3c7;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            background: #fafafa;
+        }
+        .upload-area:hover { border-color: var(--accent-color); background: #f0f8ff; }
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .gallery-item {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+
+        /* --- Buttons --- */
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 6px;
+            font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+            font-family: inherit; transition: 0.2s; font-size: 0.9rem;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .btn-primary { background: var(--primary-color); color: white; }
+        .btn-success { background: var(--success-color); color: white; }
+        .btn-danger { background: var(--danger-color); color: white; }
+        .btn-warning { background: var(--warning-color); color: white; }
+        .btn-action { padding: 5px 10px; font-size: 0.8rem; }
+
+        /* --- Data Table --- */
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        .data-table th, .data-table td { padding: 12px; text-align: right; border-bottom: 1px solid #eee; }
+        .data-table th { background: #f8f9fa; color: #555; }
+        .data-table tr:hover { background: #f1f2f6; }
+
+        /* --- Card Preview (Hidden Logic) --- */
+        .card-preview-container {
+            display: flex;
+            justify-content: center;
+            background: #7f8c8d;
+            padding: 30px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        /* Uses exact same card styling as V12 but scaled for desktop view */
+        .card-container {
+            background: white; width: 148mm; min-height: 210mm; padding: 10mm;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2); border: 1px solid #ddd;
+            position: relative; text-align: right; direction: rtl;
+            font-family: 'Segoe UI', sans-serif !important;
+            flex-shrink: 0;
+        }
+
+        /* --- Card Internal Styles (Re-used) --- */
+        .header-card { text-align: center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; margin-bottom: 20px; }
+        .header-card h2 { margin: 5px 0; font-size: 18px; color: #2c3e50; }
+        .header-card h3 { margin: 2px 0; font-size: 12px; font-weight: normal; }
+        .info-table-front { width: 100%; border-collapse: collapse; margin-bottom: 15px; direction: rtl; }
+        .info-table-front td { padding: 8px 2px; vertical-align: bottom; }
+        .cell-label { font-weight: bold; width: 90px; white-space: nowrap; text-align: right; }
+        .cell-colon { width: 10px; text-align: center; font-weight: bold; }
+        .cell-data { border-bottom: 1px dotted #000; text-align: right; font-family: monospace; font-weight: bold; }
+        .schedule-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; direction: rtl; }
+        .schedule-table th, .schedule-table td { border: 1px solid #333; padding: 5px; text-align: center; vertical-align: middle; }
+        .schedule-table th { background-color: #ecf0f1; font-weight: bold; }
+        .cell-content-ar { font-weight: bold; display: block; margin-bottom: 2px; }
+        .cell-content-en { font-size: 9px; color: #555; display: block; direction: ltr; }
+        .editable-cell { background: #fff; min-height: 20px; cursor: text; text-align: right; direction: rtl; }
+        .check-box { width: 16px; height: 16px; border: 1px solid #333; display: inline-block; cursor: pointer; position: relative; }
+        .check-box.checked { background: #2c3e50; }
+        .check-box.checked::after { content: '✓'; color: white; position: absolute; top: -3px; left: 2px; font-size: 12px; }
+        
+        /* Logo Styles */
+        .logos-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .logo-box-preview { width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; }
+        .logo-box-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        /* Print Logic */
+        .card-side { display: none; }
+        .card-side.visible { display: block; }
+        #card-element.show-all-sides { padding: 0 !important; border: none !important; background: transparent !important; min-height: auto !important; height: auto !important; }
+        #card-element.show-all-sides .card-side { display: block !important; width: 148mm; height: 209mm; padding: 10mm; background: white; border: 1px solid #ddd; box-sizing: border-box; margin-bottom: 0; }
+        #card-element.show-all-sides #side-front { page-break-after: always; }
+
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2c3e50; color: white; padding: 10px 20px; border-radius: 30px; display: none; z-index: 1000; }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>برنامج البحث (AFCM)</h2>
+            <p>د. فيلوباتير صموئيل</p>
+        </div>
+        <nav>
+            <a class="nav-link" onclick="switchView('dashboard', this)">📊 لوحة المعلومات (Dashboard)</a>
+            <a class="nav-link active" onclick="switchView('register', this)">📝 تسجيل حالة جديدة</a>
+            <a class="nav-link" onclick="switchView('database', this)">📂 قاعدة البيانات</a>
+            <a class="nav-link" onclick="switchView('card', this)">💳 طباعة الكارت</a>
+            <a class="nav-link" onclick="switchView('settings', this)">⚙️ الإعدادات (الشعارات)</a>
+        </nav>
+        <div class="sidebar-footer">
+            نسخة الكمبيوتر V15.0<br>
+            2026 Research Protocol
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        
+        <!-- 0. DASHBOARD VIEW -->
+        <div id="view-dashboard" class="view-section">
+            <h2 class="panel-title" style="margin-bottom: 20px;">لوحة المعلومات والإحصائيات (Dashboard)</h2>
+            
+            <!-- Quick Stats -->
+            <div class="grid-4">
+                <div class="stat-card">
+                    <span class="stat-icon">👥</span>
+                    <span class="stat-number" id="dashTotal">0</span>
+                    <span class="stat-label">إجمالي الحالات</span>
+                </div>
+                <div class="stat-card" style="border-bottom-color: var(--success-color);">
+                    <span class="stat-icon">🎂</span>
+                    <span class="stat-number" id="dashAvgAge">0</span>
+                    <span class="stat-label">متوسط العمر (سنة)</span>
+                </div>
+                <div class="stat-card" style="border-bottom-color: var(--warning-color);">
+                    <span class="stat-icon">📸</span>
+                    <span class="stat-number" id="dashPhotos">0</span>
+                    <span class="stat-label">صور مخزنة</span>
+                </div>
+                <div class="stat-card" style="border-bottom-color: var(--danger-color);">
+                    <span class="stat-icon">📅</span>
+                    <span class="stat-number" id="dashToday">0</span>
+                    <span class="stat-label">حالات اليوم</span>
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-top: 25px;">
+                <!-- Group Distribution -->
+                <div class="panel-card">
+                    <h3 class="panel-title">توزيع المجموعات (Groups Distribution)</h3>
+                    <hr style="border:0; border-top:1px solid #eee; margin:10px 0 20px;">
+                    
+                    <div id="groupStatsContainer">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+
+                <!-- Norwood Scale Stats -->
+                <div class="panel-card">
+                    <h3 class="panel-title">تحليل درجات الصلع (Norwood Scale)</h3>
+                    <hr style="border:0; border-top:1px solid #eee; margin:10px 0 20px;">
+                    <div style="display: flex; align-items: flex-end; justify-content: space-around; height: 150px; padding-top: 20px;" id="norwoodChart">
+                        <!-- Bars filled by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="panel-card">
+                <h3 class="panel-title">نشاط حديث (Recent Activity)</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>الكود</th>
+                            <th>الاسم</th>
+                            <th>المجموعة</th>
+                            <th>الوقت</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentActivityTable">
+                        <!-- Rows -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 1. REGISTER NEW PATIENT -->
+        <div id="view-register" class="view-section active">
+            <h2 class="panel-title" style="margin-bottom: 20px;">تسجيل بيانات المريض والبحث (Research Data Entry)</h2>
+            
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h3 class="panel-title">1. البيانات الأساسية (Basic Info)</h3>
+                    <button class="btn btn-primary btn-action" onclick="clearForm()">+ حالة جديدة</button>
+                </div>
+                <input type="hidden" id="inpDbId">
+                
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>اسم المريض (Patient Name)</label>
+                        <input type="text" id="inpName" oninput="liveUpdate()" placeholder="الاسم ثلاثي">
+                    </div>
+                    <div class="form-group">
+                        <label>كود البحث (ID)</label>
+                        <input type="text" id="inpID" oninput="liveUpdate()" placeholder="ex: A-01">
+                    </div>
+                </div>
+                
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label>السن (Age)</label>
+                        <input type="number" id="inpAge" oninput="liveUpdate()">
+                    </div>
+                    <div class="form-group">
+                        <label>رقم الهاتف (Phone)</label>
+                        <input type="tel" id="inpPhone" oninput="liveUpdate()">
+                    </div>
+                    <div class="form-group">
+                        <label>المجموعة (Group)</label>
+                        <select id="inpGroup" onchange="liveUpdate()">
+                            <option value="">-- اختر المجموعة --</option>
+                            <option value="Group A: Combined">Group A: Combined</option>
+                            <option value="Group B: iA-PRF Only">Group B: iA-PRF Only</option>
+                            <option value="Group C: Minoxidil Only">Group C: Minoxidil Only</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESEARCH PROTOCOL DATA FIELDS -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h3 class="panel-title">2. بيانات التقييم الطبي (Clinical Assessment)</h3>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Hamilton-Norwood Scale (I-VII)</label>
+                        <select id="inpNorwood">
+                            <option value="">-- Select Grade --</option>
+                            <option value="I">Type I</option>
+                            <option value="II">Type II</option>
+                            <option value="III">Type III (Vertex)</option>
+                            <option value="IV">Type IV</option>
+                            <option value="V">Type V</option>
+                            <option value="VI">Type VI</option>
+                            <option value="VII">Type VII</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Dermoscopy Grading (Mild/Mod/Severe)</label>
+                        <select id="inpDermoGrade">
+                            <option value="">-- Select --</option>
+                            <option value="Mild (Grade 1)">Mild (Grade 1)</option>
+                            <option value="Moderate (Grade 2)">Moderate (Grade 2)</option>
+                            <option value="Severe (Grade 3)">Severe (Grade 3)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>ImageJ Hair Density (hairs/cm²)</label>
+                        <input type="number" id="inpDensity" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>ImageJ Hair Thickness (µm)</label>
+                        <input type="number" id="inpThickness" step="0.01">
+                    </div>
+                </div>
+            </div>
+
+            <!-- MULTI IMAGE UPLOAD -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h3 class="panel-title">3. صور الحالة (Attachments & Photos)</h3>
+                </div>
+                <div class="upload-area" onclick="document.getElementById('multiImgInput').click()">
+                    <span style="font-size: 2rem;">📸</span>
+                    <p>اضغط هنا لاختيار صور متعددة (إكلينيكية / ديرموسكوب)</p>
+                    <input type="file" id="multiImgInput" multiple accept="image/*" style="display:none" onchange="handleMultiUpload(event)">
+                </div>
+                <div class="gallery-grid" id="imageGallery">
+                    <!-- Images appear here -->
+                </div>
+                <p style="font-size: 0.8rem; color: #c0392b; margin-top:10px;">* تنبيه: يفضل حفظ النسخ الأصلية للصور في مجلد خارجي على الكمبيوتر برقم المريض.</p>
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h3 class="panel-title">4. الملاحظات (Notes)</h3>
+                </div>
+                <textarea id="aiInput" placeholder="أي ملاحظات إضافية أو أعراض جانبية..."></textarea>
+            </div>
+
+            <button class="btn btn-success" style="width: 100%; justify-content: center; padding: 15px;" onclick="saveToDatabase()">
+                💾 تسجيل وحفظ البيانات في البرنامج
+            </button>
+        </div>
+
+        <!-- 2. DATABASE LIST -->
+        <div id="view-database" class="view-section">
+            <div class="panel-header">
+                <h2 class="panel-title">قاعدة البيانات (Database)</h2>
+                <button class="btn btn-primary" onclick="exportData()">📤 تصدير إلى Excel (CSV)</button>
+            </div>
+            
+            <div class="form-group">
+                <input type="text" id="searchBox" placeholder="🔍 بحث في السجل بالاسم أو الكود..." onkeyup="renderPatientList()">
+            </div>
+
+            <div class="panel-card" style="padding: 0; overflow: hidden;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>الكود (ID)</th>
+                            <th>الاسم</th>
+                            <th>المجموعة</th>
+                            <th>Hamilton</th>
+                            <th>الصور</th>
+                            <th>آخر تحديث</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="patientListContainer">
+                        <!-- JS renders rows here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3. CARD PREVIEW & PRINT -->
+        <div id="view-card" class="view-section">
+            <div class="panel-header">
+                <h2 class="panel-title">معاينة وطباعة الكارت</h2>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-warning" onclick="toggleSide()">🔄 قلب الوجه</button>
+                    <button class="btn btn-success" onclick="downloadPDF('full')">📑 تحميل الكارت كاملاً (A5 PDF)</button>
+                </div>
+            </div>
+
+            <div class="card-preview-container">
+                <div id="card-element" class="card-container">
+                    <!-- SIDE 1: FRONT -->
+                    <div id="side-front" class="card-side visible">
+                        <div class="logos-header">
+                            <div class="logo-box-preview">
+                                <img id="img_logo1" style="display:none;" alt="College Logo">
+                                <span id="ph_logo1" class="logo-placeholder">شعار الكلية</span>
+                            </div>
+                            <div class="logo-box-preview">
+                                <img id="img_logo2" style="display:none;" alt="Hospital Logo">
+                                <span id="ph_logo2" class="logo-placeholder">شعار المجمع</span>
+                            </div>
+                        </div>
+
+                        <div class="header-card">
+                            <h2>المجمع الطبي للقوات المسلحة بكوبري القبة</h2>
+                            <h3>كلية الطب ق.م - قسم الجلدية (RSU)</h3>
+                        </div>
+                        <div style="background:#2c3e50; color:white; padding:5px; text-align:center; border-radius:4px; margin:10px 0;">
+                            كارت متابعة بحثي - MPHL Protocol
+                        </div>
+                        
+                        <div style="border:1px solid #ccc; padding:10px 15px; border-radius:5px; margin-top:20px;">
+                            <table class="info-table-front" dir="rtl">
+                                <tr><td class="cell-label" dir="rtl">الاسم</td><td class="cell-colon">:</td><td class="cell-data" dir="rtl" id="outName"></td></tr>
+                                <tr><td class="cell-label" dir="rtl">كود البحث</td><td class="cell-colon">:</td><td class="cell-data" dir="rtl" id="outID"></td></tr>
+                                <tr><td class="cell-label" dir="rtl">السن</td><td class="cell-colon">:</td><td class="cell-data" dir="rtl" id="outAge" style="width: auto;"></td></tr>
+                                <tr><td class="cell-label" dir="rtl">رقم الهاتف</td><td class="cell-colon">:</td><td class="cell-data" dir="rtl" id="outPhone"></td></tr>
+                                <tr><td class="cell-label" dir="rtl">المجموعة</td><td class="cell-colon">:</td><td class="cell-data" dir="rtl" id="outGroup"></td></tr>
+                            </table>
+                        </div>
+
+                        <div style="border:2px solid #c0392b; background:#fff5f5; padding:8px; text-align:center; margin-top:30px; font-size:12px; border-radius:5px;">
+                            <strong>تنبيه أمني:</strong> حامل الكارت يتبع عيادة الجلدية. برجاء تسهيل الدخول.
+                        </div>
+                        <div style="margin-top:50px; display:flex; justify-content:space-between; font-size:13px; font-weight:bold;">
+                            <div style="text-align:center;">الباحث<br>ن.ط/ فيلوباتير صموئيل</div>
+                            <div style="text-align:center;">يعتمد،<br>رئيس القسم</div>
+                        </div>
+                    </div>
+
+                    <!-- SIDE 2: BACK -->
+                    <div id="side-back" class="card-side">
+                        <div class="header-card">
+                            <h2>جدول المتابعة والزيارات</h2>
+                            <h3>Follow-up Schedule</h3>
+                        </div>
+                        <table class="schedule-table" dir="rtl">
+                            <thead>
+                                <tr><th width="20%">الزيارة</th><th width="20%">التاريخ</th><th width="15%">الضغط</th><th width="10%">Photo</th><th>الملاحظات</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><span class="cell-content-ar">الزيارة الأولى</span><span class="cell-content-en">(Baseline)</span></td>
+                                    <td class="editable-cell" contenteditable="true" id="date_0"></td><td class="editable-cell" contenteditable="true" id="bp_0"></td>
+                                    <td><div class="check-box" id="photo_0" onclick="toggleCheck(this)"></div></td>
+                                    <td><span class="cell-content-ar">تحاليل - حقن ١</span><span class="cell-content-en">Labs / Inj 1</span></td></tr>
+                                <tr><td><span class="cell-content-ar">الزيارة الثانية</span><span class="cell-content-en">(Week 4)</span></td>
+                                    <td class="editable-cell" contenteditable="true" id="date_1"></td><td class="editable-cell" contenteditable="true" id="bp_1"></td>
+                                    <td><div class="check-box" id="photo_1" onclick="toggleCheck(this)"></div></td>
+                                    <td><span class="cell-content-ar">متابعة - حقن ٢</span><span class="cell-content-en">Follow-up / Inj 2</span></td></tr>
+                                <tr><td><span class="cell-content-ar">الزيارة الثالثة</span><span class="cell-content-en">(Week 8)</span></td>
+                                    <td class="editable-cell" contenteditable="true" id="date_2"></td><td class="editable-cell" contenteditable="true" id="bp_2"></td>
+                                    <td><div class="check-box" id="photo_2" onclick="toggleCheck(this)"></div></td>
+                                    <td><span class="cell-content-ar">متابعة - حقن ٣</span><span class="cell-content-en">Follow-up / Inj 3</span></td></tr>
+                                <tr><td><span class="cell-content-ar">نهاية العلاج</span><span class="cell-content-en">(Week 12)</span></td>
+                                    <td class="editable-cell" contenteditable="true" id="date_3"></td><td class="editable-cell" contenteditable="true" id="bp_3"></td>
+                                    <td><div class="check-box" id="photo_3" onclick="toggleCheck(this)"></div></td>
+                                    <td><span class="cell-content-ar">تقييم نهائي</span><span class="cell-content-en">End Assessment</span></td></tr>
+                                <tr><td><span class="cell-content-ar">متابعة نهائية</span><span class="cell-content-en">(Month 6)</span></td>
+                                    <td class="editable-cell" contenteditable="true" id="date_4"></td><td class="editable-cell" contenteditable="true" id="bp_4"></td>
+                                    <td><div class="check-box" id="photo_4" onclick="toggleCheck(this)"></div></td>
+                                    <td><span class="cell-content-ar">فحص نهائي</span><span class="cell-content-en">Final Check</span></td></tr>
+                            </tbody>
+                        </table>
+                        <div style="margin-top:20px; font-size:12px;">
+                            <div style="margin-bottom: 5px;"><strong dir="rtl" style="display:block; text-align:right;">سجل الملاحظات:</strong><span dir="ltr" style="display:block; text-align:left; font-size: 10px; font-weight: bold; color: #555;">(Progress Notes)</span></div>
+                            <div id="outNotes" class="editable-cell" contenteditable="true" style="border:1px solid #999; height:120px; padding:8px; white-space: pre-wrap; font-family: monospace;"></div>
+                        </div>
+                        <div style="position:absolute; bottom:10mm; left:0; width:100%; text-align:center; font-size:12px;">للطوارئ: 01275621234</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. SETTINGS (LOGOS) -->
+        <div id="view-settings" class="view-section">
+            <h2 class="panel-title">إعدادات البرنامج (Settings)</h2>
+            <div class="panel-card">
+                <h3>إعداد شعارات الكارت</h3>
+                <div class="grid-2">
+                    <div class="upload-area" onclick="document.getElementById('upl1').click()">
+                        <p>شعار الكلية (يمين)</p>
+                        <input type="file" id="upl1" accept="image/*" onchange="saveLogo(event, 'logo1')">
+                    </div>
+                    <div class="upload-area" onclick="document.getElementById('upl2').click()">
+                        <p>شعار المجمع (يسار)</p>
+                        <input type="file" id="upl2" accept="image/*" onchange="saveLogo(event, 'logo2')">
+                    </div>
+                </div>
+                <button class="btn btn-danger" onclick="clearLogos()" style="margin-top:15px;">🗑️ حذف الشعارات</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="toast" class="toast">تم الحفظ بنجاح</div>
+
+    <script>
+        // --- Navigation ---
+        function switchView(viewName, linkEl) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById('view-' + viewName).classList.add('active');
+            
+            if(linkEl) {
+                document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+                linkEl.classList.add('active');
+            }
+            if(viewName === 'database') renderPatientList();
+            if(viewName === 'dashboard') renderDashboard();
+        }
+
+        // --- Logo Logic ---
+        window.onload = function() {
+            loadSavedLogo('logo1');
+            loadSavedLogo('logo2');
+            renderPatientList();
+            // Start at register by default, or dashboard if preferred
+        };
+
+        function saveLogo(event, key) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        localStorage.setItem(key, e.target.result);
+                        displayLogo(key, e.target.result);
+                        showToast("✅ تم حفظ الشعار");
+                    } catch (err) { alert("الصورة كبيرة جداً."); }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        function loadSavedLogo(key) {
+            const saved = localStorage.getItem(key);
+            if (saved) displayLogo(key, saved);
+        }
+        function displayLogo(key, src) {
+            const img = document.getElementById('img_' + key);
+            const ph = document.getElementById('ph_' + key);
+            if (img && ph) { img.src = src; img.style.display = 'block'; ph.style.display = 'none'; img.parentElement.style.border = 'none'; }
+        }
+        function clearLogos() {
+            if(confirm("حذف الشعارات؟")) { localStorage.removeItem('logo1'); localStorage.removeItem('logo2'); location.reload(); }
+        }
+
+        // --- Multi Image Handling ---
+        let currentImages = []; // Stores Base64 strings
+
+        function handleMultiUpload(event) {
+            const files = event.target.files;
+            if (!files.length) return;
+
+            // Limit warning
+            if (currentImages.length + files.length > 10) {
+                alert("تنبيه: عدد الصور كبير جداً، قد يؤثر على سرعة البرنامج.");
+            }
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentImages.push(e.target.result);
+                    renderGallery();
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function renderGallery() {
+            const gallery = document.getElementById('imageGallery');
+            gallery.innerHTML = '';
+            currentImages.forEach((src, index) => {
+                const img = document.createElement('img');
+                img.src = src;
+                img.className = 'gallery-item';
+                img.title = "Click to remove";
+                img.onclick = () => { 
+                    if(confirm("حذف هذه الصورة؟")) {
+                        currentImages.splice(index, 1); 
+                        renderGallery(); 
+                    }
+                };
+                gallery.appendChild(img);
+            });
+        }
+
+        // --- DB Logic ---
+        let patientsDB = JSON.parse(localStorage.getItem('afcm_patients_v1')) || [];
+
+        function saveToDatabase() {
+            const id = document.getElementById('inpID').value.trim();
+            const dbKey = document.getElementById('inpDbId').value;
+            
+            if(!id) { showToast("⚠️ برجاء إدخال كود البحث (ID)!"); return; }
+
+            // Harvest Table Visits
+            const visits = [];
+            for(let i=0; i<5; i++) {
+                visits.push({
+                    date: document.getElementById(`date_${i}`).innerText,
+                    bp: document.getElementById(`bp_${i}`).innerText,
+                    photo: document.getElementById(`photo_${i}`).classList.contains('checked')
+                });
+            }
+
+            const patientData = {
+                id: id,
+                name: document.getElementById('inpName').value,
+                age: document.getElementById('inpAge').value,
+                phone: document.getElementById('inpPhone').value,
+                group: document.getElementById('inpGroup').value,
+                // Protocol Data
+                norwood: document.getElementById('inpNorwood').value,
+                dermoGrade: document.getElementById('inpDermoGrade').value,
+                density: document.getElementById('inpDensity').value,
+                thickness: document.getElementById('inpThickness').value,
+                
+                notes: document.getElementById('aiInput').value,
+                cardNotes: document.getElementById('outNotes').innerText,
+                visits: visits,
+                images: currentImages, // Store array of images
+                lastUpdated: new Date().toLocaleString('ar-EG')
+            };
+
+            if(dbKey) {
+                patientsDB[dbKey] = patientData;
+            } else {
+                const existsIdx = patientsDB.findIndex(p => p.id === id);
+                if(existsIdx > -1) {
+                    if(!confirm("⚠️ هذا الكود مسجل بالفعل. هل تريد تحديث البيانات؟")) return;
+                    patientsDB[existsIdx] = patientData;
+                } else {
+                    patientsDB.push(patientData);
+                }
+            }
+
+            try {
+                localStorage.setItem('afcm_patients_v1', JSON.stringify(patientsDB));
+                showToast("✅ تم التسجيل بنجاح");
+                clearForm();
+            } catch(e) {
+                alert("ذاكرة المتصفح ممتلئة! الصور كثيرة جداً. حاول تقليل عدد الصور أو حجمها.");
+            }
+        }
+
+        function renderPatientList() {
+            const container = document.getElementById('patientListContainer');
+            const search = document.getElementById('searchBox').value.toLowerCase();
+            container.innerHTML = '';
+            
+            const filtered = patientsDB.filter(p => (p.name && p.name.toLowerCase().includes(search)) || (p.id && p.id.toLowerCase().includes(search)));
+
+            filtered.forEach((p, index) => {
+                const originalIndex = patientsDB.indexOf(p);
+                const imgCount = p.images ? p.images.length : 0;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${p.id}</td>
+                    <td>${p.name}</td>
+                    <td>${p.group}</td>
+                    <td>${p.norwood || '-'}</td>
+                    <td>${imgCount} 📷</td>
+                    <td>${p.lastUpdated}</td>
+                    <td>
+                        <button class="btn btn-primary btn-action" onclick="editPatient(${originalIndex})">✏️</button>
+                        <button class="btn btn-danger btn-action" onclick="deletePatient(${originalIndex})">🗑️</button>
+                    </td>
+                `;
+                container.appendChild(tr);
+            });
+        }
+
+        function editPatient(index) {
+            const p = patientsDB[index];
+            document.getElementById('inpDbId').value = index;
+            document.getElementById('inpName').value = p.name;
+            document.getElementById('inpID').value = p.id;
+            document.getElementById('inpAge').value = p.age;
+            document.getElementById('inpPhone').value = p.phone;
+            document.getElementById('inpGroup').value = p.group;
+            
+            // Protocol fields
+            document.getElementById('inpNorwood').value = p.norwood || "";
+            document.getElementById('inpDermoGrade').value = p.dermoGrade || "";
+            document.getElementById('inpDensity').value = p.density || "";
+            document.getElementById('inpThickness').value = p.thickness || "";
+
+            document.getElementById('aiInput').value = p.notes || "";
+            document.getElementById('outNotes').innerText = p.cardNotes || "";
+
+            // Restore Images
+            currentImages = p.images || [];
+            renderGallery();
+
+            // Restore Card Visits
+            if(p.visits) {
+                p.visits.forEach((v, i) => {
+                    if(document.getElementById(`date_${i}`)) {
+                        document.getElementById(`date_${i}`).innerText = v.date || "";
+                        document.getElementById(`bp_${i}`).innerText = v.bp || "";
+                        if(v.photo) document.getElementById(`photo_${i}`).classList.add('checked');
+                        else document.getElementById(`photo_${i}`).classList.remove('checked');
+                    }
+                });
+            } else clearCardTable();
+            
+            liveUpdate();
+            // Switch to Register View
+            switchView('register');
+            showToast("تم تحميل الملف: " + p.name);
+        }
+
+        function deletePatient(index) {
+            if(confirm("حذف هذا المريض نهائياً؟")) {
+                patientsDB.splice(index, 1);
+                localStorage.setItem('afcm_patients_v1', JSON.stringify(patientsDB));
+                renderPatientList();
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('inpDbId').value = "";
+            document.querySelectorAll('input:not([type=file]), select, textarea').forEach(el => el.value = "");
+            document.getElementById('outNotes').innerText = "";
+            currentImages = [];
+            renderGallery();
+            clearCardTable();
+            liveUpdate();
+        }
+
+        function clearCardTable() {
+            for(let i=0; i<5; i++) {
+                document.getElementById(`date_${i}`).innerText = "";
+                document.getElementById(`bp_${i}`).innerText = "";
+                document.getElementById(`photo_${i}`).classList.remove('checked');
+            }
+        }
+
+        function exportData() {
+            if(patientsDB.length === 0) { alert("لا توجد بيانات"); return; }
+            let csv = "\uFEFFID,Name,Age,Phone,Group,Norwood,DermoGrade,Density,Thickness,Notes,LastUpdated\n";
+            patientsDB.forEach(p => {
+                csv += `${p.id},"${p.name}",${p.age},"${p.phone}","${p.group}","${p.norwood||''}","${p.dermoGrade||''}","${p.density||''}","${p.thickness||''}","${(p.notes||'').replace(/\n/g,' ')}",${p.lastUpdated}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "AFCM_Research_Data.csv";
+            link.click();
+        }
+
+        function toggleCheck(el) { el.classList.toggle('checked'); }
+        function showToast(msg) { const t=document.getElementById('toast'); t.innerText=msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 3000); }
+
+        function liveUpdate() {
+            document.getElementById('outName').innerText = document.getElementById('inpName').value;
+            document.getElementById('outID').innerText = document.getElementById('inpID').value;
+            document.getElementById('outAge').innerText = document.getElementById('inpAge').value;
+            document.getElementById('outPhone').innerText = document.getElementById('inpPhone').value;
+            document.getElementById('outGroup').innerText = document.getElementById('inpGroup').value;
+        }
+
+        // --- DASHBOARD LOGIC (NEW) ---
+        function renderDashboard() {
+            // 1. Basic Counts
+            const total = patientsDB.length;
+            document.getElementById('dashTotal').innerText = total;
+
+            // 2. Avg Age
+            let sumAge = 0;
+            let validAges = 0;
+            // 3. Counts Per Group
+            const groups = {
+                "Group A: Combined": 0,
+                "Group B: iA-PRF Only": 0,
+                "Group C: Minoxidil Only": 0
+            };
+            // 4. Counts Per Norwood
+            const norwood = {};
+            // 5. Total Photos
+            let totalPhotos = 0;
+            // 6. Today count
+            let todayCount = 0;
+            const todayStr = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY somewhat
+
+            patientsDB.forEach(p => {
+                // Age
+                if(p.age && !isNaN(p.age)) {
+                    sumAge += parseInt(p.age);
+                    validAges++;
+                }
+                // Group
+                if(groups[p.group] !== undefined) groups[p.group]++;
+                else if(p.group) { 
+                    // catch variations
+                    if(p.group.includes("Group A")) groups["Group A: Combined"]++;
+                    else if(p.group.includes("Group B")) groups["Group B: iA-PRF Only"]++;
+                    else if(p.group.includes("Group C")) groups["Group C: Minoxidil Only"]++;
+                }
+
+                // Norwood
+                const n = p.norwood || "Unknown";
+                norwood[n] = (norwood[n] || 0) + 1;
+
+                // Photos
+                if(p.images) totalPhotos += p.images.length;
+
+                // Today
+                if(p.lastUpdated && p.lastUpdated.includes(new Date().toLocaleDateString('ar-EG'))) todayCount++;
+            });
+
+            document.getElementById('dashAvgAge').innerText = validAges > 0 ? (sumAge / validAges).toFixed(1) : 0;
+            document.getElementById('dashPhotos').innerText = totalPhotos;
+            document.getElementById('dashToday').innerText = todayCount;
+
+            // Render Groups Bars
+            const groupContainer = document.getElementById('groupStatsContainer');
+            groupContainer.innerHTML = "";
+            const groupColors = {"Group A: Combined": "fill-a", "Group B: iA-PRF Only": "fill-b", "Group C: Minoxidil Only": "fill-c"};
+            
+            for(const [gName, count] of Object.entries(groups)) {
+                const pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+                const html = `
+                    <div class="progress-container">
+                        <div class="progress-header">
+                            <span>${gName}</span>
+                            <span>${count} (${pct}%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${groupColors[gName] || 'fill-a'}" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+                groupContainer.insertAdjacentHTML('beforeend', html);
+            }
+
+            // Render Norwood Chart (Vertical Bars)
+            const norwoodContainer = document.getElementById('norwoodChart');
+            norwoodContainer.innerHTML = "";
+            const norwoodOrder = ["I", "II", "III", "IV", "V", "VI", "VII"];
+            norwoodOrder.forEach(n => {
+                const count = norwood[n] || 0;
+                const height = total > 0 ? (count / total) * 100 : 0;
+                // Min height for visibility
+                const barHeight = Math.max(height, 2) + "%"; 
+                const html = `
+                    <div style="display:flex; flex-direction:column; align-items:center; width: 10%;">
+                        <span style="font-size:0.8rem; font-weight:bold; margin-bottom:5px;">${count}</span>
+                        <div style="width:100%; background:#2c3e50; height:80px; position:relative; border-radius:4px 4px 0 0; background: linear-gradient(to top, #3498db ${barHeight}, #eee ${barHeight});"></div>
+                        <span style="font-size:0.8rem; margin-top:5px;">${n}</span>
+                    </div>
+                `;
+                norwoodContainer.insertAdjacentHTML('beforeend', html);
+            });
+
+            // Render Recent Activity (Last 5)
+            const recentTable = document.getElementById('recentActivityTable');
+            recentTable.innerHTML = "";
+            // Clone and reverse to get latest first
+            const latest = [...patientsDB].reverse().slice(0, 5);
+            latest.forEach(p => {
+                recentTable.insertAdjacentHTML('beforeend', `
+                    <tr>
+                        <td>${p.id}</td>
+                        <td style="text-align:right;">${p.name}</td>
+                        <td>${p.group.split(':')[0]}</td>
+                        <td style="direction:ltr; text-align:right;">${p.lastUpdated.split(',')[1] || p.lastUpdated}</td>
+                    </tr>
+                `);
+            });
+        }
+
+        // --- Card Logic ---
+        let isFront = true;
+        function toggleSide() {
+            const f = document.getElementById('side-front');
+            const b = document.getElementById('side-back');
+            if(isFront) { f.classList.remove('visible'); b.classList.add('visible'); } 
+            else { b.classList.remove('visible'); f.classList.add('visible'); }
+            isFront = !isFront;
+        }
+
+        async function downloadPDF(mode) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a5');
+            const w = doc.internal.pageSize.getWidth();
+            const h = doc.internal.pageSize.getHeight();
+            const name = document.getElementById('inpName').value || 'Patient';
+            const cardEl = document.getElementById('card-element');
+            const f = document.getElementById('side-front');
+            const b = document.getElementById('side-back');
+
+            showToast("📸 جاري تحضير ملف PDF عالي الجودة...");
+            
+            // Increased scale for better resolution (High Quality)
+            const scale = 2; // 2x scale factor - SAFER for browser memory
+            const config = { 
+                width: cardEl.offsetWidth * scale, 
+                height: cardEl.offsetHeight * scale, 
+                style: { 
+                    transform: `scale(${scale})`, 
+                    transformOrigin: 'top left',
+                    width: `${cardEl.offsetWidth}px`,
+                    height: `${cardEl.offsetHeight}px`
+                },
+                quality: 1 
+            };
+
+            try {
+                // Front
+                f.classList.add('visible'); b.classList.remove('visible');
+                await new Promise(r=>setTimeout(r,500)); // Increased delay for rendering
+                const img1 = await domtoimage.toPng(cardEl, config);
+                doc.addImage(img1, 'PNG', 0, 0, w, h);
+
+                // Back
+                doc.addPage();
+                f.classList.remove('visible'); b.classList.add('visible');
+                await new Promise(r=>setTimeout(r,500));
+                const img2 = await domtoimage.toPng(cardEl, config);
+                doc.addImage(img2, 'PNG', 0, 0, w, h);
+
+                // Reset
+                f.classList.add('visible'); b.classList.remove('visible'); isFront=true;
+                
+                doc.save(`${name}_Full_Card.pdf`);
+                showToast("✅ تم التحميل بجودة عالية");
+            } catch(e) { console.error(e); alert("خطأ في التصوير: " + e.message + " - يرجى تقليل عدد الصور أو المحاولة مرة أخرى."); }
+        }
+    </script>
+</body>
+</html>
