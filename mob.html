@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>برنامج AFCM البحثي (Mobile)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Segoe+UI&display=swap" rel="stylesheet">
+    
+    <!-- Libraries (CDN - Requires Internet) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #1a252f;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #c0392b;
+            --bg-color: #f0f2f5;
+            --sidebar-width: 250px;
+        }
+
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Segoe UI', 'Cairo', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Mobile Menu Button --- */
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 1001;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* --- Sidebar Navigation --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            text-align: center;
+            padding: 0 15px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+        }
+        .sidebar-header h2 { margin: 0; font-size: 1.1rem; color: var(--accent-color); }
+        .sidebar-header p { margin: 5px 0 0; font-size: 0.7rem; color: #bdc3c7; }
+
+        .nav-link {
+            padding: 15px 20px;
+            color: #ecf0f1;
+            text-decoration: none;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255,255,255,0.1);
+            border-right: 4px solid var(--accent-color);
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 20px;
+            font-size: 0.7rem;
+            color: #7f8c8d;
+            text-align: center;
+        }
+
+        /* --- Main Content Area --- */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            position: relative;
+            padding-top: 60px; /* Space for mobile menu */
+        }
+
+        .view-section { display: none; animation: fadeIn 0.3s; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- Forms & Cards --- */
+        .panel-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .panel-header {
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .panel-title { font-size: 1rem; color: var(--primary-color); font-weight: bold; margin: 0; }
+
+        /* Grids */
+        .grid-2, .grid-3, .grid-4 { display: grid; gap: 15px; }
+        .grid-2 { grid-template-columns: 1fr 1fr; }
+        .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; color: #555; font-size: 0.85rem; }
+        input, select, textarea {
+            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;
+            font-size: 14px; font-family: inherit; transition: 0.3s;
+            background: #fff;
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--accent-color); }
+
+        /* --- Dashboard Stats --- */
+        .stat-card {
+            background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            text-align: center; border-bottom: 4px solid var(--accent-color);
+        }
+        .stat-icon { font-size: 1.5rem; margin-bottom: 5px; display: block; }
+        .stat-number { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); display: block; }
+        .stat-label { font-size: 0.8rem; color: #7f8c8d; }
+        
+        /* Progress Bars */
+        .progress-container { margin-bottom: 15px; }
+        .progress-header { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.8rem; font-weight: 600; }
+        .progress-bar { background: #eee; height: 8px; border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; transition: width 0.5s ease-in-out; }
+        .fill-a { background: #3498db; }
+        .fill-b { background: #9b59b6; }
+        .fill-c { background: #e67e22; }
+
+        /* --- Image Upload & Gallery --- */
+        .upload-area {
+            border: 2px dashed #bdc3c7;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            background: #fafafa;
+        }
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            margin-top: 15px;
+        }
+        .gallery-item {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        /* --- Buttons --- */
+        .btn {
+            padding: 10px 15px; border: none; border-radius: 6px;
+            font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+            font-family: inherit; transition: 0.2s; font-size: 0.85rem; justify-content: center;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: var(--primary-color); color: white; }
+        .btn-success { background: var(--success-color); color: white; }
+        .btn-danger { background: var(--danger-color); color: white; }
+        .btn-warning { background: var(--warning-color); color: white; }
+        .btn-action { padding: 5px 8px; font-size: 0.75rem; }
+
+        /* --- Data Table --- */
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.8rem; white-space: nowrap; }
+        .data-table th, .data-table td { padding: 10px; text-align: right; border-bottom: 1px solid #eee; }
+        .data-table th { background: #f8f9fa; color: #555; }
+
+        /* --- Card Preview --- */
+        .card-preview-container {
+            display: flex;
+            justify-content: center;
+            background: #7f8c8d;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+        .card-container {
+            background: white; width: 148mm; min-height: 210mm; padding: 10mm;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2); border: 1px solid #ddd;
+            position: relative; text-align: right; direction: rtl;
+            font-family: 'Segoe UI', sans-serif !important;
+            flex-shrink: 0;
+            transform-origin: top center;
+        }
+
+        /* --- Card Styles --- */
+        .header-card { text-align: center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; margin-bottom: 20px; }
+        .header-card h2 { margin: 5px 0; font-size: 18px; color: #2c3e50; }
+        .header-card h3 { margin: 2px 0; font-size: 12px; font-weight: normal; }
+        .info-table-front { width: 100%; border-collapse: collapse; margin-bottom: 15px; direction: rtl; }
+        .info-table-front td { padding: 8px 2px; vertical-align: bottom; }
+        .cell-label { font-weight: bold; width: 90px; white-space: nowrap; text-align: right; }
+        .cell-colon { width: 10px; text-align: center; font-weight: bold; }
+        .cell-data { border-bottom: 1px dotted #000; text-align: right; font-family: monospace; font-weight: bold; }
+        .schedule-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; direction: rtl; }
+        .schedule-table th, .schedule-table td { border: 1px solid #333; padding: 5px; text-align: center; vertical-align: middle; }
+        .schedule-table th { background-color: #ecf0f1; font-weight: bold; }
+        .cell-content-ar { font-weight: bold; display: block; margin-bottom: 2px; }
+        .cell-content-en { font-size: 9px; color: #555; display: block; direction: ltr; }
+        .editable-cell { background: #fff; min-height: 20px; cursor: text; text-align: right; direction: rtl; }
+        .check-box { width: 16px; height: 16px; border: 1px solid #333; display: inline-block; cursor: pointer; position: relative; }
+        .check-box.checked { background: #2c3e50; }
+        .check-box.checked::after { content: '✓'; color: white; position: absolute; top: -3px; left: 2px; font-size: 12px; }
+        .logos-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .logo-box-preview { width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; }
+        .logo-box-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        
+        /* Print Logic */
+        .card-side { display: none; }
+        .card-side.visible { display: block; }
+        #card-element.show-all-sides { padding: 0 !important; border: none !important; background: transparent !important; min-height: auto !important; height: auto !important; }
+        #card-element.show-all-sides .card-side { display: block !important; width: 148mm; height: 209mm; padding: 10mm; background: white; border: 1px solid #ddd; box-sizing: border-box; margin-bottom: 0; }
+        #card-element.show-all-sides #side-front { page-break-after: always; }
+
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2c3e50; color: white; padding: 10px 20px; border-radius: 30px; display: none; z-index: 2000; font-size: 0.9rem; width: 90%; text-align: center; }
+
+        /* --- MOBILE RESPONSIVE TWEAKS --- */
+        @media (max-width: 768px) {
+            .menu-toggle { display: block; }
+            .sidebar { 
+                position: fixed; top: 0; right: -100%; height: 100%; 
+                width: 70%; max-width: 300px;
+            }
+            .sidebar.active { right: 0; }
+            
+            .main-content { padding: 15px; padding-top: 60px; }
+            
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+            
+            .stat-card { padding: 10px; display: flex; align-items: center; justify-content: space-between; text-align: right; }
+            .stat-icon { margin: 0; font-size: 2rem; }
+            .stat-number { font-size: 1.2rem; }
+            
+            .card-preview-container { justify-content: flex-start; }
+            .card-container { transform: scale(0.65); margin-left: -50px; margin-top: -50px; margin-bottom: -100px; }
+            
+            .panel-header { flex-direction: column; align-items: flex-start; }
+            .panel-header button { width: 100%; margin-top: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Mobile Menu Toggle -->
+    <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>برنامج البحث (App)</h2>
+            <p>د. فيلوباتير صموئيل</p>
+        </div>
+        <nav>
+            <a class="nav-link active" onclick="switchView('register', this)">📝 تسجيل حالة جديدة</a>
+            <a class="nav-link" onclick="switchView('dashboard', this)">📊 لوحة المعلومات</a>
+            <a class="nav-link" onclick="switchView('database', this)">📂 قاعدة البيانات</a>
+            <a class="nav-link" onclick="switchView('card', this)">💳 كارت المتابعة</a>
+            <a class="nav-link" onclick="switchView('settings', this)">⚙️ الإعدادات</a>
+        </nav>
+        <div class="sidebar-footer">
+            نسخة الموبايل V1.0<br>
+            2026 Research Protocol
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" onclick="closeSidebarOutside()">
+        
+        <!-- 0. DASHBOARD VIEW -->
+        <div id="view-dashboard" class="view-section">
+            <h2 class="panel-title" style="margin-bottom: 15px;">لوحة المعلومات (Dashboard)</h2>
+            
+            <!-- Quick Stats -->
+            <div class="grid-4">
+                <div class="stat-card">
+                    <div>
+                        <span class="stat-number" id="dashTotal">0</span>
+                        <span class="stat-label">إجمالي الحالات</span>
+                    </div>
+                    <span class="stat-icon">👥</span>
+                </div>
+                <div class="stat-card" style="border-bottom-color: var(--success-color);">
+                    <div>
+                        <span class="stat-number" id="dashAvgAge">0</span>
+                        <span class="stat-label">متوسط العمر</span>
+                    </div>
+                    <span class="stat-icon">🎂</span>
+                </div>
+                <div class="stat-card" style="border-bottom-color: var(--warning-color);">
+                    <div>
+                        <span class="stat-number" id="dashPhotos">0</span>
+                        <span class="stat-label">صور مخزنة</span>
+                    </div>
+                    <span class="stat-icon">📸</span>
+                </div>
+                <div class="stat-card" style="border-bottom-color: var(--danger-color);">
+                    <div>
+                        <span class="stat-number" id="dashToday">0</span>
+                        <span class="stat-label">حالات اليوم</span>
+                    </div>
+                    <span class="stat-icon">📅</span>
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-top: 20px;">
+                <!-- Group Distribution -->
+                <div class="panel-card">
+                    <h3 class="panel-title">توزيع المجموعات</h3>
+                    <hr style="border:0; border-top:1px solid #eee; margin:10px 0 15px;">
+                    <div id="groupStatsContainer"></div>
+                </div>
+
+                <!-- Norwood Scale Stats -->
+                <div class="panel-card">
+                    <h3 class="panel-title">درجات الصلع (Norwood)</h3>
+                    <hr style="border:0; border-top:1px solid #eee; margin:10px 0 15px;">
+                    <div style="display: flex; align-items: flex-end; justify-content: space-around; height: 120px; padding-top: 10px;" id="norwoodChart"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. REGISTER NEW PATIENT -->
+        <div id="view-register" class="view-section active">
+            <div class="panel-card" style="background: #e8f6f3; border: 1px solid var(--success-color);">
+                <div class="panel-header" style="border:none; margin:0; padding:0;">
+                    <h2 class="panel-title">تسجيل مريض جديد</h2>
+                    <button class="btn btn-primary btn-action" onclick="clearForm()">+ مسح النموذج</button>
+                </div>
+            </div>
+            
+            <div class="panel-card">
+                <h3 class="panel-title" style="margin-bottom:10px;">1. البيانات الأساسية</h3>
+                <input type="hidden" id="inpDbId">
+                
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>كود البحث (ID) *</label>
+                        <input type="text" id="inpID" oninput="liveUpdate()" placeholder="ex: A-01" style="font-weight:bold; color:var(--danger-color);">
+                    </div>
+                    <div class="form-group">
+                        <label>اسم المريض</label>
+                        <input type="text" id="inpName" oninput="liveUpdate()" placeholder="الاسم ثلاثي">
+                    </div>
+                </div>
+                
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label>السن</label>
+                        <input type="number" id="inpAge" oninput="liveUpdate()" placeholder="سنة">
+                    </div>
+                    <div class="form-group">
+                        <label>الهاتف</label>
+                        <input type="tel" id="inpPhone" oninput="liveUpdate()">
+                    </div>
+                    <div class="form-group">
+                        <label>المجموعة (Group)</label>
+                        <select id="inpGroup" onchange="liveUpdate()">
+                            <option value="">-- اختر --</option>
+                            <option value="Group A: Combined">Group A: Combined</option>
+                            <option value="Group B: iA-PRF Only">Group B: iA-PRF Only</option>
+                            <option value="Group C: Minoxidil Only">Group C: Minoxidil Only</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <h3 class="panel-title" style="margin-bottom:10px;">2. التقييم الطبي</h3>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Norwood Scale</label>
+                        <select id="inpNorwood">
+                            <option value="">-- Select --</option>
+                            <option value="I">Type I</option>
+                            <option value="II">Type II</option>
+                            <option value="III">Type III</option>
+                            <option value="IV">Type IV</option>
+                            <option value="V">Type V</option>
+                            <option value="VI">Type VI</option>
+                            <option value="VII">Type VII</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Dermoscopy Grade</label>
+                        <select id="inpDermoGrade">
+                            <option value="">-- Select --</option>
+                            <option value="Mild (Grade 1)">Mild (Grade 1)</option>
+                            <option value="Moderate (Grade 2)">Moderate (Grade 2)</option>
+                            <option value="Severe (Grade 3)">Severe (Grade 3)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Density (hairs/cm²)</label>
+                        <input type="number" id="inpDensity" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Thickness (µm)</label>
+                        <input type="number" id="inpThickness" step="0.01">
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <h3 class="panel-title" style="margin-bottom:10px;">3. الصور والملاحظات</h3>
+                <div class="upload-area" onclick="document.getElementById('multiImgInput').click()">
+                    <span style="font-size: 1.5rem;">📸</span>
+                    <p style="margin:5px 0; font-size:0.8rem;">اضغط لإضافة صور</p>
+                    <input type="file" id="multiImgInput" multiple accept="image/*" style="display:none" onchange="handleMultiUpload(event)">
+                </div>
+                <div class="gallery-grid" id="imageGallery"></div>
+                
+                <div class="form-group" style="margin-top:15px;">
+                    <textarea id="aiInput" placeholder="ملاحظات إضافية..." rows="3"></textarea>
+                </div>
+            </div>
+
+            <button class="btn btn-success" style="width: 100%; padding: 15px; font-size:1rem; margin-bottom: 50px;" onclick="saveToDatabase()">
+                💾 حفظ البيانات (Save)
+            </button>
+        </div>
+
+        <!-- 2. DATABASE LIST -->
+        <div id="view-database" class="view-section">
+            <div class="panel-header">
+                <h2 class="panel-title">قاعدة البيانات</h2>
+                <button class="btn btn-primary" onclick="exportData()">📤 Excel</button>
+            </div>
+            
+            <div class="form-group">
+                <input type="text" id="searchBox" placeholder="🔍 بحث بالاسم أو الكود..." onkeyup="renderPatientList()">
+            </div>
+
+            <div class="panel-card" style="padding: 0;">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>الاسم</th>
+                                <th>المجموعة</th>
+                                <th>تعديل</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patientListContainer"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. CARD PREVIEW -->
+        <div id="view-card" class="view-section">
+            <div class="panel-header">
+                <h2 class="panel-title">طباعة الكارت</h2>
+                <div style="display: flex; gap: 5px;">
+                    <button class="btn btn-warning btn-action" onclick="toggleSide()">🔄 قلب</button>
+                    <button class="btn btn-success btn-action" onclick="downloadPDF('full')">📩 PDF</button>
+                </div>
+            </div>
+
+            <p style="font-size:0.8rem; color:#666; text-align:center;">اسحب لليسار لرؤية الكارت كاملاً</p>
+
+            <div class="card-preview-container">
+                <div id="card-element" class="card-container">
+                    <!-- FRONT -->
+                    <div id="side-front" class="card-side visible">
+                        <div class="logos-header">
+                            <div class="logo-box-preview">
+                                <img id="img_logo1" style="display:none;" alt="College Logo">
+                                <span id="ph_logo1" class="logo-placeholder">شعار 1</span>
+                            </div>
+                            <div class="logo-box-preview">
+                                <img id="img_logo2" style="display:none;" alt="Hospital Logo">
+                                <span id="ph_logo2" class="logo-placeholder">شعار 2</span>
+                            </div>
+                        </div>
+
+                        <div class="header-card">
+                            <h2>المجمع الطبي كوبري القبة</h2>
+                            <h3>قسم الجلدية (RSU)</h3>
+                        </div>
+                        <div style="background:#2c3e50; color:white; padding:5px; text-align:center; border-radius:4px; margin:10px 0;">
+                            MPHL Protocol
+                        </div>
+                        
+                        <div style="border:1px solid #ccc; padding:10px; border-radius:5px; margin-top:20px;">
+                            <table class="info-table-front" dir="rtl">
+                                <tr><td class="cell-label" dir="rtl">الاسم</td><td class="cell-colon">:</td><td class="cell-data" dir="rtl" id="outName"></td></tr>
+                                <tr><td class="cell-label" dir="rtl">كود البحث</td><td class="cell-colon">:</td><td class="cell-data" dir="rtl" id="outID"></td></tr>
+                                <tr><td class="cell-label" dir="rtl">السن</td><td class="cell-colon">:</td><td class="cell-data" dir="rtl" id="outAge"></td></tr>
+                                <tr><td class="cell-label" dir="rtl">الهاتف</td><td class="cell-colon">:</td><td class="cell-data" dir="rtl" id="outPhone"></td></tr>
+                                <tr><td class="cell-label" dir="rtl">المجموعة</td><td class="cell-colon">:</td><td class="cell-data" dir="rtl" id="outGroup"></td></tr>
+                            </table>
+                        </div>
+                        <div style="margin-top:40px; text-align:center; font-size:12px;">
+                            الباحث/ د. فيلوباتير صموئيل
+                        </div>
+                    </div>
+
+                    <!-- BACK -->
+                    <div id="side-back" class="card-side">
+                        <div class="header-card">
+                            <h2>جدول المتابعة</h2>
+                            <h3>Follow-up Schedule</h3>
+                        </div>
+                        <table class="schedule-table" dir="rtl">
+                            <thead><tr><th>الزيارة</th><th>التاريخ</th><th>BP</th><th>Img</th></tr></thead>
+                            <tbody>
+                                <tr><td>Baseline</td><td class="editable-cell" contenteditable="true" id="date_0"></td><td class="editable-cell" contenteditable="true" id="bp_0"></td><td><div class="check-box" id="photo_0" onclick="toggleCheck(this)"></div></td></tr>
+                                <tr><td>Week 4</td><td class="editable-cell" contenteditable="true" id="date_1"></td><td class="editable-cell" contenteditable="true" id="bp_1"></td><td><div class="check-box" id="photo_1" onclick="toggleCheck(this)"></div></td></tr>
+                                <tr><td>Week 8</td><td class="editable-cell" contenteditable="true" id="date_2"></td><td class="editable-cell" contenteditable="true" id="bp_2"></td><td><div class="check-box" id="photo_2" onclick="toggleCheck(this)"></div></td></tr>
+                                <tr><td>Week 12</td><td class="editable-cell" contenteditable="true" id="date_3"></td><td class="editable-cell" contenteditable="true" id="bp_3"></td><td><div class="check-box" id="photo_3" onclick="toggleCheck(this)"></div></td></tr>
+                                <tr><td>Month 6</td><td class="editable-cell" contenteditable="true" id="date_4"></td><td class="editable-cell" contenteditable="true" id="bp_4"></td><td><div class="check-box" id="photo_4" onclick="toggleCheck(this)"></div></td></tr>
+                            </tbody>
+                        </table>
+                        <div style="margin-top:10px; border:1px solid #999; height:80px; padding:5px; font-size:10px;" id="outNotes" contenteditable="true">Notes...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. SETTINGS -->
+        <div id="view-settings" class="view-section">
+            <h2 class="panel-title">الإعدادات</h2>
+            <div class="panel-card">
+                <h3>شعارات الكارت</h3>
+                <div class="grid-2">
+                    <div class="upload-area" onclick="document.getElementById('upl1').click()">
+                        <p>شعار 1</p>
+                        <input type="file" id="upl1" accept="image/*" onchange="saveLogo(event, 'logo1')">
+                    </div>
+                    <div class="upload-area" onclick="document.getElementById('upl2').click()">
+                        <p>شعار 2</p>
+                        <input type="file" id="upl2" accept="image/*" onchange="saveLogo(event, 'logo2')">
+                    </div>
+                </div>
+                <button class="btn btn-danger" onclick="clearLogos()" style="margin-top:15px; width:100%;">حذف الشعارات</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="toast" class="toast">تم الحفظ بنجاح</div>
+
+    <script>
+        // --- Mobile Logic ---
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            if(sb.classList.contains('active')) sb.classList.remove('active');
+            else sb.classList.add('active');
+        }
+        function closeSidebarOutside() {
+            const sb = document.getElementById('sidebar');
+            if(sb.classList.contains('active')) sb.classList.remove('active');
+        }
+
+        // --- Navigation ---
+        function switchView(viewName, linkEl) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById('view-' + viewName).classList.add('active');
+            
+            if(linkEl) {
+                document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+                linkEl.classList.add('active');
+            }
+            if(window.innerWidth <= 768) toggleSidebar(); // Close menu on click
+            if(viewName === 'database') renderPatientList();
+            if(viewName === 'dashboard') renderDashboard();
+        }
+
+        // --- Logo Logic ---
+        window.onload = function() {
+            loadSavedLogo('logo1');
+            loadSavedLogo('logo2');
+            renderPatientList();
+        };
+
+        function saveLogo(event, key) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        localStorage.setItem(key, e.target.result);
+                        displayLogo(key, e.target.result);
+                        showToast("✅ تم حفظ الشعار");
+                    } catch (err) { alert("الصورة كبيرة جداً."); }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        function loadSavedLogo(key) {
+            const saved = localStorage.getItem(key);
+            if (saved) displayLogo(key, saved);
+        }
+        function displayLogo(key, src) {
+            const img = document.getElementById('img_' + key);
+            const ph = document.getElementById('ph_' + key);
+            if (img && ph) { img.src = src; img.style.display = 'block'; ph.style.display = 'none'; img.parentElement.style.border = 'none'; }
+        }
+        function clearLogos() {
+            if(confirm("حذف الشعارات؟")) { localStorage.removeItem('logo1'); localStorage.removeItem('logo2'); location.reload(); }
+        }
+
+        // --- Multi Image Handling ---
+        let currentImages = []; 
+
+        function handleMultiUpload(event) {
+            const files = event.target.files;
+            if (!files.length) return;
+            if (currentImages.length + files.length > 5) alert("تنبيه: كثرة الصور قد تبطئ التطبيق");
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentImages.push(e.target.result);
+                    renderGallery();
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function renderGallery() {
+            const gallery = document.getElementById('imageGallery');
+            gallery.innerHTML = '';
+            currentImages.forEach((src, index) => {
+                const img = document.createElement('img');
+                img.src = src;
+                img.className = 'gallery-item';
+                img.onclick = () => { 
+                    if(confirm("حذف الصورة؟")) {
+                        currentImages.splice(index, 1); 
+                        renderGallery(); 
+                    }
+                };
+                gallery.appendChild(img);
+            });
+        }
+
+        // --- DB Logic ---
+        let patientsDB = JSON.parse(localStorage.getItem('afcm_patients_v1')) || [];
+
+        function saveToDatabase() {
+            const id = document.getElementById('inpID').value.trim();
+            const dbKey = document.getElementById('inpDbId').value;
+            
+            if(!id) { showToast("⚠️ ادخل كود البحث (ID)!"); return; }
+
+            const visits = [];
+            for(let i=0; i<5; i++) {
+                visits.push({
+                    date: document.getElementById(`date_${i}`).innerText,
+                    bp: document.getElementById(`bp_${i}`).innerText,
+                    photo: document.getElementById(`photo_${i}`).classList.contains('checked')
+                });
+            }
+
+            const patientData = {
+                id: id,
+                name: document.getElementById('inpName').value,
+                age: document.getElementById('inpAge').value,
+                phone: document.getElementById('inpPhone').value,
+                group: document.getElementById('inpGroup').value,
+                norwood: document.getElementById('inpNorwood').value,
+                dermoGrade: document.getElementById('inpDermoGrade').value,
+                density: document.getElementById('inpDensity').value,
+                thickness: document.getElementById('inpThickness').value,
+                notes: document.getElementById('aiInput').value,
+                cardNotes: document.getElementById('outNotes').innerText,
+                visits: visits,
+                images: currentImages, 
+                lastUpdated: new Date().toLocaleString('ar-EG')
+            };
+
+            if(dbKey) {
+                patientsDB[dbKey] = patientData;
+            } else {
+                const existsIdx = patientsDB.findIndex(p => p.id === id);
+                if(existsIdx > -1) {
+                    if(!confirm("⚠️ الكود موجود. تحديث؟")) return;
+                    patientsDB[existsIdx] = patientData;
+                } else {
+                    patientsDB.push(patientData);
+                }
+            }
+
+            try {
+                localStorage.setItem('afcm_patients_v1', JSON.stringify(patientsDB));
+                showToast("✅ تم الحفظ");
+                clearForm();
+            } catch(e) {
+                alert("الذاكرة ممتلئة. قلل الصور.");
+            }
+        }
+
+        function renderPatientList() {
+            const container = document.getElementById('patientListContainer');
+            const search = document.getElementById('searchBox').value.toLowerCase();
+            container.innerHTML = '';
+            
+            const filtered = patientsDB.filter(p => (p.name && p.name.toLowerCase().includes(search)) || (p.id && p.id.toLowerCase().includes(search)));
+
+            filtered.forEach((p, index) => {
+                const originalIndex = patientsDB.indexOf(p);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${p.id}</td>
+                    <td>${p.name}</td>
+                    <td>${p.group.split(':')[0]}</td>
+                    <td>
+                        <button class="btn btn-primary btn-action" onclick="editPatient(${originalIndex})">✏️</button>
+                        <button class="btn btn-danger btn-action" onclick="deletePatient(${originalIndex})">🗑️</button>
+                    </td>
+                `;
+                container.appendChild(tr);
+            });
+        }
+
+        function editPatient(index) {
+            const p = patientsDB[index];
+            document.getElementById('inpDbId').value = index;
+            document.getElementById('inpName').value = p.name;
+            document.getElementById('inpID').value = p.id;
+            document.getElementById('inpAge').value = p.age;
+            document.getElementById('inpPhone').value = p.phone;
+            document.getElementById('inpGroup').value = p.group;
+            document.getElementById('inpNorwood').value = p.norwood || "";
+            document.getElementById('inpDermoGrade').value = p.dermoGrade || "";
+            document.getElementById('inpDensity').value = p.density || "";
+            document.getElementById('inpThickness').value = p.thickness || "";
+            document.getElementById('aiInput').value = p.notes || "";
+            document.getElementById('outNotes').innerText = p.cardNotes || "";
+            currentImages = p.images || [];
+            renderGallery();
+
+            if(p.visits) {
+                p.visits.forEach((v, i) => {
+                    if(document.getElementById(`date_${i}`)) {
+                        document.getElementById(`date_${i}`).innerText = v.date || "";
+                        document.getElementById(`bp_${i}`).innerText = v.bp || "";
+                        if(v.photo) document.getElementById(`photo_${i}`).classList.add('checked');
+                        else document.getElementById(`photo_${i}`).classList.remove('checked');
+                    }
+                });
+            } else clearCardTable();
+            
+            liveUpdate();
+            switchView('register');
+        }
+
+        function deletePatient(index) {
+            if(confirm("حذف؟")) {
+                patientsDB.splice(index, 1);
+                localStorage.setItem('afcm_patients_v1', JSON.stringify(patientsDB));
+                renderPatientList();
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('inpDbId').value = "";
+            document.querySelectorAll('input:not([type=file]), select, textarea').forEach(el => el.value = "");
+            document.getElementById('outNotes').innerText = "";
+            currentImages = [];
+            renderGallery();
+            clearCardTable();
+            liveUpdate();
+        }
+
+        function clearCardTable() {
+            for(let i=0; i<5; i++) {
+                document.getElementById(`date_${i}`).innerText = "";
+                document.getElementById(`bp_${i}`).innerText = "";
+                document.getElementById(`photo_${i}`).classList.remove('checked');
+            }
+        }
+
+        function exportData() {
+            if(patientsDB.length === 0) { alert("لا توجد بيانات"); return; }
+            let csv = "\uFEFFID,Name,Age,Group,LastUpdated\n";
+            patientsDB.forEach(p => {
+                csv += `${p.id},"${p.name}",${p.age},"${p.group}",${p.lastUpdated}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "ResearchData.csv";
+            link.click();
+        }
+
+        function toggleCheck(el) { el.classList.toggle('checked'); }
+        function showToast(msg) { const t=document.getElementById('toast'); t.innerText=msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 3000); }
+        function liveUpdate() {
+            document.getElementById('outName').innerText = document.getElementById('inpName').value;
+            document.getElementById('outID').innerText = document.getElementById('inpID').value;
+            document.getElementById('outAge').innerText = document.getElementById('inpAge').value;
+            document.getElementById('outPhone').innerText = document.getElementById('inpPhone').value;
+            document.getElementById('outGroup').innerText = document.getElementById('inpGroup').value;
+        }
+
+        // --- DASHBOARD ---
+        function renderDashboard() {
+            const total = patientsDB.length;
+            document.getElementById('dashTotal').innerText = total;
+
+            let sumAge = 0, validAges = 0, totalPhotos = 0, todayCount = 0;
+            const groups = { "Group A: Combined": 0, "Group B: iA-PRF Only": 0, "Group C: Minoxidil Only": 0 };
+            const norwood = {};
+
+            patientsDB.forEach(p => {
+                if(p.age) { sumAge += parseInt(p.age); validAges++; }
+                if(groups[p.group] !== undefined) groups[p.group]++;
+                else if(p.group && p.group.includes("Group A")) groups["Group A: Combined"]++;
+                else if(p.group && p.group.includes("Group B")) groups["Group B: iA-PRF Only"]++;
+                else if(p.group && p.group.includes("Group C")) groups["Group C: Minoxidil Only"]++;
+
+                const n = p.norwood || "?";
+                norwood[n] = (norwood[n] || 0) + 1;
+                if(p.images) totalPhotos += p.images.length;
+                if(p.lastUpdated && p.lastUpdated.includes(new Date().toLocaleDateString('ar-EG'))) todayCount++;
+            });
+
+            document.getElementById('dashAvgAge').innerText = validAges > 0 ? (sumAge / validAges).toFixed(1) : 0;
+            document.getElementById('dashPhotos').innerText = totalPhotos;
+            document.getElementById('dashToday').innerText = todayCount;
+
+            // Groups
+            const groupContainer = document.getElementById('groupStatsContainer');
+            groupContainer.innerHTML = "";
+            const gColors = {"Group A: Combined": "fill-a", "Group B: iA-PRF Only": "fill-b", "Group C: Minoxidil Only": "fill-c"};
+            for(const [gName, count] of Object.entries(groups)) {
+                const pct = total > 0 ? ((count / total) * 100).toFixed(0) : 0;
+                groupContainer.insertAdjacentHTML('beforeend', `<div class="progress-container"><div class="progress-header"><span>${gName}</span><span>${count}</span></div><div class="progress-bar"><div class="progress-fill ${gColors[gName]}" style="width: ${pct}%"></div></div></div>`);
+            }
+
+            // Norwood
+            const norwoodContainer = document.getElementById('norwoodChart');
+            norwoodContainer.innerHTML = "";
+            ["I","II","III","IV","V","VI","VII"].forEach(n => {
+                const count = norwood[n] || 0;
+                const h = total > 0 ? (count/total)*100 : 0;
+                norwoodContainer.insertAdjacentHTML('beforeend', `<div style="display:flex; flex-direction:column; align-items:center; width:10%;"><span style="font-size:0.7rem; font-weight:bold;">${count}</span><div style="width:100%; background:linear-gradient(to top, #3498db ${Math.max(h,5)}%, #eee ${Math.max(h,5)}%); height:60px; border-radius:3px;"></div><span style="font-size:0.6rem;">${n}</span></div>`);
+            });
+        }
+
+        // --- Card PDF ---
+        let isFront = true;
+        function toggleSide() {
+            const f = document.getElementById('side-front');
+            const b = document.getElementById('side-back');
+            if(isFront) { f.classList.remove('visible'); b.classList.add('visible'); } 
+            else { b.classList.remove('visible'); f.classList.add('visible'); }
+            isFront = !isFront;
+        }
+
+        async function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a5');
+            const w = doc.internal.pageSize.getWidth();
+            const h = doc.internal.pageSize.getHeight();
+            const name = document.getElementById('inpName').value || 'Patient';
+            const cardEl = document.getElementById('card-element');
+            const f = document.getElementById('side-front');
+            const b = document.getElementById('side-back');
+
+            showToast("⏳ جاري التحضير...");
+            const scale = 2;
+            const config = { width: cardEl.offsetWidth * scale, height: cardEl.offsetHeight * scale, style: { transform: `scale(${scale})`, transformOrigin: 'top left', width: `${cardEl.offsetWidth}px`, height: `${cardEl.offsetHeight}px` }, quality: 1 };
+
+            try {
+                f.classList.add('visible'); b.classList.remove('visible');
+                await new Promise(r=>setTimeout(r,500));
+                const img1 = await domtoimage.toPng(cardEl, config);
+                doc.addImage(img1, 'PNG', 0, 0, w, h);
+
+                doc.addPage();
+                f.classList.remove('visible'); b.classList.add('visible');
+                await new Promise(r=>setTimeout(r,500));
+                const img2 = await domtoimage.toPng(cardEl, config);
+                doc.addImage(img2, 'PNG', 0, 0, w, h);
+
+                f.classList.add('visible'); b.classList.remove('visible'); isFront=true;
+                
+                doc.save(`${name}_Card.pdf`);
+                showToast("✅ تم التحميل");
+            } catch(e) { console.error(e); alert("خطأ في التحميل: " + e.message); }
+        }
+    </script>
+</body>
+</html>
